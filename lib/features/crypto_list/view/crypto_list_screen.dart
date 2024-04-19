@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:crypto_coins_list/features/crypto_list/bloc/crypto_list_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,39 +37,57 @@ class _CryptoListScreenState extends State<CryptoListScreen> {
           backgroundColor: theme.colorScheme.inversePrimary,
           title: Text(widget.title),
         ),
-        body: BlocBuilder<CryptoListBloc, CryptoListState>(
-          bloc:  _cryptoListBloc,
-          builder: (context, state) {
-            if(state is CryptoListLoaded) {
-              return ListView.separated(
-                itemCount: state.coinsList.length,
-                separatorBuilder: (context, index) => Divider(),
-                itemBuilder: (context, i) {
-                  final coin = state.coinsList[i];
-                  return CryptoCoinTile(coin: coin);
-                },
-              );
-            }
-            if(state is CryptoListLoadingFailure) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Something went wrong',
-                      style: theme.textTheme.headlineMedium,
-                    ),
-                    Text(
-                      'Please try again later',
-                      style: theme.textTheme.labelSmall?.copyWith(fontSize: 16),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return const Center(child: CircularProgressIndicator());
+        body: RefreshIndicator(
+          onRefresh: () async {
+            final completer = Completer();
+            _cryptoListBloc.add(LoadCryptoList(completer: completer));
+            return completer.future;
           },
+          child: BlocBuilder<CryptoListBloc, CryptoListState>(
+            bloc:  _cryptoListBloc,
+            builder: (context, state) {
+              if(state is CryptoListLoaded) {
+                return ListView.separated(
+                  itemCount: state.coinsList.length,
+                  separatorBuilder: (context, index) => Divider(),
+                  itemBuilder: (context, i) {
+                    final coin = state.coinsList[i];
+                    return CryptoCoinTile(coin: coin);
+                  },
+                );
+              }
+              if(state is CryptoListLoadingFailure) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Something went wrong',
+                        style: theme.textTheme.headlineMedium,
+                      ),
+                      Text(
+                        'Please try again later',
+                        style: theme.textTheme.labelSmall?.copyWith(fontSize: 16),
+                      ),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final completer = Completer();
+                          _cryptoListBloc.add(LoadCryptoList(completer: completer));
+                          return completer.future;
+                        },
+                        child: const Text('Try again'),
+                      )
+                    ],
+                  ),
+                );
+              }
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
         )
     );
   }
